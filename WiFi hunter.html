@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#000000">
+<title>WiFi Hunter</title>
+<style>
+:root{--c:#00e5ff;--g:#00ff9d;--r:#ff3b5c;--y:#ffd23f;--m:#6a8590;--bg:#000;box-sizing:border-box;padding-top:env(safe-area-inset-top)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#000;color:#e8f6ff;font:15px -apple-system,system-ui,sans-serif;padding-bottom:calc(84px + env(safe-area-inset-bottom));min-height:100dvh}
+h1{font-size:13px;letter-spacing:.3em;color:var(--c);text-align:center;margin:10px 0 0;text-shadow:0 0 14px var(--c)}
+section{display:none;padding:10px 18px}section.on{display:block}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:rgba(6,10,13,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #12333b;padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{flex:1;background:none;border:0;color:var(--m);padding:15px 0 13px;font:600 11px -apple-system,system-ui;letter-spacing:.1em}
+nav button.on{color:var(--c);text-shadow:0 0 12px var(--c)}
+.pill{display:block;width:max-content;margin:8px auto;padding:5px 16px;border-radius:99px;border:1px solid var(--m);color:var(--m);font:700 12px system-ui;letter-spacing:.2em}
+.pill.ONLINE{color:var(--g);border-color:var(--g);box-shadow:0 0 14px rgba(0,255,157,.35)}.pill.UNSTABLE{color:var(--y);border-color:var(--y)}.pill.OFFLINE{color:var(--r);border-color:var(--r);box-shadow:0 0 14px rgba(255,59,92,.4)}
+.gauge{position:relative;width:250px;height:250px;margin:4px auto}
+.radar{position:absolute;inset:6px;border-radius:50%;border:1px solid #0e2a30;background:conic-gradient(from 0deg,rgba(0,255,157,.2),transparent 22%);animation:spin 3.2s linear infinite;animation-play-state:paused;opacity:.5}
+.gauge.run .radar{animation-play-state:running;opacity:1}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gauge svg{position:absolute;inset:0;width:100%;height:100%}
+.gc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.gc b{font-size:62px;font-weight:300;line-height:1}.gc small{color:var(--m);font-size:11px;letter-spacing:.12em;margin-top:6px}
+.lat{text-align:center;margin:2px 0 10px;color:var(--m);font-size:12px;letter-spacing:.1em}.lat b{font-size:30px;color:#fff;font-weight:600;letter-spacing:0}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
+.cell{background:#070c10;border:1px solid #14262d;border-radius:14px;padding:10px}.cell b{display:block;font-size:19px;margin-top:2px}.cell span{font-size:10px;color:var(--m);letter-spacing:.08em}
+canvas#ch{width:100%;height:130px;display:block;background:#05090c;border:1px solid #14262d;border-radius:14px}
+.btn{width:100%;margin-top:12px;padding:18px;border-radius:18px;border:1px solid var(--c);background:rgba(0,229,255,.09);color:var(--c);font:700 16px system-ui;letter-spacing:.14em;box-shadow:0 0 22px rgba(0,229,255,.22)}
+.btn.stop{border-color:var(--r);color:var(--r);background:rgba(255,59,92,.09);box-shadow:0 0 22px rgba(255,59,92,.22)}
+.btn.sm{padding:12px;font-size:13px;margin-top:8px}.btn:disabled{opacity:.4}
+.note{color:var(--m);font-size:12px;line-height:1.45;margin:10px 0}
+.err{display:none;border:1px solid var(--y);color:var(--y);border-radius:14px;padding:12px;font-size:13px;margin:10px 0;line-height:1.4}
+details{margin:10px 0;font-size:13px;color:var(--m)}summary{padding:6px 0}
+input,select{width:100%;padding:12px;border-radius:12px;border:1px solid #1d3a43;background:#071014;color:#fff;font-size:16px;margin:6px 0}
+.hc{border-radius:28px;padding:30px 18px;text-align:center;border:1px solid var(--m);transition:background .6s,border-color .6s,box-shadow .6s;margin-top:6px}
+.hc h2{margin:0;font-size:26px;letter-spacing:.08em}.hc p{margin:8px 0 0;font-size:13px;color:#cfe}
+.hc.ye{background:radial-gradient(circle,rgba(255,210,63,.22),#0a0a05 70%);border-color:var(--y);box-shadow:0 0 30px rgba(255,210,63,.25)}.hc.ye h2{color:var(--y)}
+.hc.re{background:radial-gradient(circle,rgba(255,59,92,.25),#0d0508 70%);border-color:var(--r);box-shadow:0 0 30px rgba(255,59,92,.3)}.hc.re h2{color:var(--r)}
+.hc.gr{background:radial-gradient(circle,rgba(0,255,157,.22),#030d08 70%);border-color:var(--g);box-shadow:0 0 30px rgba(0,255,157,.3)}.hc.gr h2{color:var(--g)}
+.hc.cy{background:radial-gradient(circle,rgba(0,229,255,.25),#03090d 70%);border-color:var(--c);box-shadow:0 0 34px rgba(0,229,255,.35)}.hc.cy h2{color:var(--c)}
+.hc.pulse{animation:pl 1.6s ease-in-out infinite}@keyframes pl{50%{transform:scale(1.025)}}
+.bar{height:6px;background:#0c1a1f;border-radius:9px;margin:12px 0 0;overflow:hidden;visibility:hidden}.bar i{display:block;height:100%;width:0;background:var(--c);box-shadow:0 0 10px var(--c)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.chip{padding:5px 11px;border-radius:99px;border:1px solid;font-size:12px;font-weight:700}
+#room{position:relative;aspect-ratio:4/5;border:2px solid #1d4a55;border-radius:10px;background:linear-gradient(#0a171c 1px,transparent 1px) 0 0/10% 10%,linear-gradient(90deg,#0a171c 1px,transparent 1px) 0 0/10% 10%,#04090c;touch-action:manipulation}
+.pt{position:absolute;width:42px;height:42px;border-radius:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;font-weight:800;color:#000;font-size:14px;border:2px solid #fff3}
+.row{background:#070c10;border:1px solid #14262d;border-radius:14px;padding:11px 12px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;font-size:13px}.row.s{border-color:var(--c)}.row b{font-size:17px}
+#toast{position:fixed;left:18px;right:18px;bottom:calc(92px + env(safe-area-inset-bottom));background:#0b1d22;border:1px solid var(--c);color:#fff;border-radius:14px;padding:12px;font-size:13px;display:none;z-index:9}
+@media (prefers-reduced-motion:reduce){.radar,.hc.pulse{animation:none}}
+</style></head><body>
+<h1>WIFI HUNTER</h1>
+
+<section id="v0" class="on">
+ <span id="pill" class="pill">IDLE</span>
+ <div class="gauge" id="gauge"><div class="radar"></div>
+  <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="90" fill="none" stroke="#10222a" stroke-width="9"/><circle id="arc" cx="100" cy="100" r="90" fill="none" stroke="#00e5ff" stroke-width="9" stroke-linecap="round" stroke-dasharray="565.5" stroke-dashoffset="565.5" transform="rotate(-90 100 100)" style="transition:stroke-dashoffset .8s,stroke .8s;filter:drop-shadow(0 0 5px currentColor)"/></svg>
+  <div class="gc"><b id="score">--</b><small>CONNECTION QUALITY</small></div></div>
+ <div class="lat">LATENCY <b id="lat">—</b> ms</div>
+ <div class="grid">
+  <div class="cell"><span>MEDIAN</span><b id="med">—</b></div><div class="cell"><span>AVERAGE</span><b id="avg">—</b></div><div class="cell"><span>P95</span><b id="p95">—</b></div>
+  <div class="cell"><span>JITTER</span><b id="jit">—</b></div><div class="cell"><span>FAILED</span><b id="fail">—</b></div><div class="cell"><span>PROBES</span><b id="cnt">0</b></div>
+ </div>
+ <canvas id="ch"></canvas>
+ <div class="err" id="err">Все тестовые серверы не отвечают. Это может быть настоящий обрыв сети — или эти серверы заблокированы. Укажите свой HTTPS-адрес ниже (любой маленький файл на вашем бесплатном хостинге).</div>
+ <button class="btn" id="bs">START</button>
+ <p class="note">Показатели — окно 30 с. Это время HTTP(S)-запросов из браузера, не ICMP ping и не мощность Wi‑Fi. Quality — составной индекс (медиана 40%, P95 25%, ошибки 25%, джиттер 10%). Браузер не умеет надёжно отличать Wi‑Fi от мобильного интернета.</p>
+ <details><summary>Свой тестовый endpoint</summary><input id="cep" type="url" placeholder="https://example.com/ping.txt"><button class="btn sm" id="sep">SAVE ENDPOINT</button></details>
+</section>
+
+<section id="v1">
+ <div class="hc ye" id="hc"><h2 id="hct">READY</h2><p id="hcs">Положите телефон в первую позицию и нажмите START SCAN. Скан длится 10 секунд.</p><div class="bar" id="bar"><i id="bi"></i></div></div>
+ <div class="chips" id="chips"></div>
+ <div class="grid">
+  <div class="cell"><span>BEST</span><b id="fb">—</b></div><div class="cell"><span>CURRENT</span><b id="fc">—</b></div><div class="cell"><span>MEDIAN</span><b id="fm">—</b></div>
+  <div class="cell"><span>FAILURES</span><b id="ff">—</b></div><div class="cell"><span>STABILITY</span><b id="fs">—</b></div><div class="cell"><span>CONFIDENCE</span><b id="fq">—</b></div>
+ </div>
+ <button class="btn" id="bscan">START SCAN</button>
+ <button class="btn sm" id="bres" style="border-color:var(--m);color:var(--m);box-shadow:none">NEW SESSION</button>
+ <p class="note">Держите телефон неподвижно 10 с, затем чуть сдвиньте и сканируйте снова. Сравнение только внутри сессии. Разница меньше 8 баллов считается неубедительной; при менее чем 8 пробах — Low Confidence. Приложение не знает координат телефона — только качество связи в каждой точке.</p>
+</section>
+
+<section id="v2">
+ <p class="note" style="margin-top:0">1) выберите скан, 2) коснитесь схемы там, где лежал телефон. Касание точки удаляет её. Цвета: красный &lt;40, жёлтый 40–69, зелёный ≥70, голубой — лучший. Пунктир — мало проб. Между точками ничего не рисуется.</p>
+ <select id="pick"></select>
+ <div id="room"></div>
+ <button class="btn sm" id="clrpt" style="border-color:var(--m);color:var(--m);box-shadow:none">CLEAR POINTS</button>
+</section>
+
+<section id="v3">
+ <div id="hist"></div><div id="cmp" class="note"></div>
+ <button class="btn sm" id="exp">EXPORT JSON</button>
+ <button class="btn sm stop" id="clr">CLEAR HISTORY</button>
+ <p class="note">Коснитесь двух записей, чтобы сравнить. Данные хранятся только в этом браузере.</p>
+</section>
+
+<div id="toast"></div>
+<nav><button data-v="0" class="on">MONITOR</button><button data-v="1">FINDER</button><button data-v="2">HEATMAP</button><button data-v="3">HISTORY</button></nav>
+
+<script>
+const $=id=>document.getElementById(id),clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const LS={g:(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},s:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let E=[],rr=0,run=false,userRun=false,scanning=false,timer,wl=null,samples=[],scanBuf=[],sess=[],sel=[],P=LS.g('wh_pos',[]),PT=LS.g('wh_pts',[]);
+const f=(v,u='')=>v==null?'—':Math.round(v)+u,fp=v=>v==null?'—':(v*100).toFixed(v<.1&&v>0?1:0)+'%';
+const col=s=>s>=70?'var(--g)':s>=40?'var(--y)':'var(--r)';
+function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',3200)}
+const vib=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+
+function setupEps(){
+ E=[{n:'Google',u:'https://www.gstatic.com/generate_204'},{n:'Cloudflare',u:'https://cp.cloudflare.com/generate_204'},{n:'Apple',u:'https://www.apple.com/library/test/success.html'}];
+ const c=LS.g('wh_ep','');if(c)E.push({n:'Custom',u:c});
+ if(/^https?:$/.test(location.protocol))E.push({n:'This host',u:location.origin+location.pathname,m:'HEAD'});
+ E.forEach(e=>{e.cf=0;e.w=0});
+}
+async function probe(){
+ if(!E.some(e=>e.cf<5))E.forEach(e=>e.cf=0);
+ const pool=E.filter(e=>e.cf<5),e=pool[rr++%pool.length];
+ const c=new AbortController(),to=setTimeout(()=>c.abort(),4000),t0=performance.now();
+ try{
+  await fetch(e.u+(e.u.includes('?')?'&':'?')+'wh='+Date.now().toString(36)+Math.random().toString(36).slice(2,5),{method:e.m||'GET',mode:'no-cors',cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',signal:c.signal});
+  clearTimeout(to);e.cf=0;
+  if(!e.w){e.w=1;return null}
+  return{t:Date.now(),ms:performance.now()-t0,ok:1,ep:e.n};
+ }catch(x){clearTimeout(to);e.cf++;return{t:Date.now(),ms:performance.now()-t0,ok:0,ep:e.n,err:c.signal.aborted?'timeout':'error'}}
+}
+function stats(a){
+ const n=a.length,okA=a.filter(x=>x.ok),k=okA.length,so=okA.map(x=>x.ms).sort((x,y)=>x-y);
+ const med=k?(k%2?so[(k-1)/2]:(so[k/2-1]+so[k/2])/2):null,p95=k?so[Math.min(k-1,Math.ceil(.95*k)-1)]:null,mean=k?so.reduce((x,y)=>x+y,0)/k:null;
+ let j=null;if(k>1){let s=0;for(let i=1;i<k;i++)s+=Math.abs(okA[i].ms-okA[i-1].ms);j=s/(k-1)}
+ const fail=n?(n-k)/n:null;let score=null,stab=null;
+ if(n){const L=k?clamp(1-(med-50)/550):0,T=k?clamp(1-(p95-100)/1400):0,F=clamp(1-fail/.3),J=j==null?0:clamp(1-j/200);
+  score=Math.round(100*(.4*L+.25*T+.25*F+.1*J));stab=Math.round(100*(.6*F+.4*J))}
+ return{n,k,med,p95,mean,j,fail,score,stab,conf:n>=15?'High':n>=8?'Medium':'Low'};
+}
+async function tick(){
+ if(!run)return;const r=await probe();if(!run)return;
+ if(r){samples.push(r);if(samples.length>600)samples.shift();if(scanning)scanBuf.push(r)}
+ rM();if(scanning)rF();
+ timer=setTimeout(tick,r?(scanning?500:1000):150);
+}
+async function lock(){try{if(navigator.wakeLock&&run)wl=await navigator.wakeLock.request('screen')}catch(e){}}
+function start(){if(run)return;run=true;lock();tick();rM()}
+function stop(){run=false;clearTimeout(timer);try{wl&&wl.release()}catch(e){}wl=null;rM()}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&run)lock()});
+
+function rM(){
+ const now=Date.now(),w=samples.filter(x=>x.t>now-30000),s=stats(w),last=samples[samples.length-1];
+ $('lat').textContent=!last?'—':last.ok?Math.round(last.ms):'FAIL';
+ $('med').textContent=f(s.med);$('avg').textContent=f(s.mean);$('p95').textContent=f(s.p95);$('jit').textContent=f(s.j);$('fail').textContent=fp(s.fail);$('cnt').textContent=samples.length;
+ const ok=w.length>=5&&s.score!=null;
+ $('score').textContent=ok?s.score:'--';
+ const a=$('arc');a.style.strokeDashoffset=565.5*(1-(ok?s.score:0)/100);a.style.stroke=ok?col(s.score):'#00e5ff';
+ $('gauge').classList.toggle('run',run);
+ let st='IDLE';const l=samples.slice(-10),l4=samples.slice(-4);
+ if(run&&samples.length){
+  if(!navigator.onLine||(l4.length==4&&l4.every(x=>!x.ok)))st='OFFLINE';
+  else{const q=stats(l);st=(q.fail>=.2||(q.med!=null&&q.med>800))?'UNSTABLE':'ONLINE'}
+ }
+ const p=$('pill');p.textContent=st;p.className='pill '+st;
+ $('err').style.display=(run&&samples.length>=8&&samples.slice(-8).every(x=>!x.ok))?'block':'none';
+ const b=$('bs');b.textContent=run?'STOP':'START';b.className='btn'+(run?' stop':'');
+ chart();
+}
+function chart(){
+ const cv=$('ch'),w=cv.clientWidth,h=cv.clientHeight,d=window.devicePixelRatio||1;if(!w)return;
+ if(cv.width!==Math.round(w*d)){cv.width=Math.round(w*d);cv.height=Math.round(h*d)}
+ const x=cv.getContext('2d');x.setTransform(d,0,0,d,0,0);x.clearRect(0,0,w,h);
+ const now=Date.now(),pts=samples.filter(s=>s.t>now-60000);
+ const mx=Math.min(4000,Math.max(200,...pts.filter(p=>p.ok).map(p=>p.ms))*1.15);
+ const X=t=>(t-(now-60000))/60000*w,Y=m=>h-14-clamp(m/mx)*(h-26);
+ x.font='10px system-ui';x.fillStyle='#4a6570';x.strokeStyle='#0f2128';x.lineWidth=1;
+ [0,.5,1].forEach(q=>{const y=Y(mx*q);x.beginPath();x.moveTo(0,y);x.lineTo(w,y);x.stroke();x.fillText(Math.round(mx*q)+' ms',4,y-3)});
+ x.strokeStyle='#00e5ff';x.lineWidth=2;x.shadowColor='#00e5ff';x.shadowBlur=6;x.lineJoin='round';
+ let pen=false;x.beginPath();
+ pts.forEach(p=>{if(!p.ok){pen=false;return}const px=X(p.t),py=Y(p.ms);pen?x.lineTo(px,py):x.moveTo(px,py);pen=true});x.stroke();x.shadowBlur=0;
+ x.strokeStyle='#ff3b5c';pts.filter(p=>!p.ok).forEach(p=>{x.beginPath();x.moveTo(X(p.t),h-12);x.lineTo(X(p.t),h-2);x.stroke()});
+ x.fillStyle='#4a6570';x.fillText('−60 s',4,h-16<12?12:12);
+}
+
+function verdict(){
+ if(scanning)return{c:'ye',t:'MEASURING',s:'Не двигайте телефон… проб: '+scanBuf.length,p:0};
+ const cur=sess[sess.length-1];if(!cur)return{c:'ye',t:'READY',s:'Положите телефон в первую позицию и нажмите START SCAN. Скан длится 10 секунд.',p:0};
+ if(cur.conf==='Low')return{c:'ye',t:'LOW CONFIDENCE',s:'Слишком мало проб ('+cur.n+'). Повторите скан без лишних пауз.',p:1};
+ if(sess.length===1)return{c:'cy',t:'BASELINE SAVED',s:'Это лучшая сохранённая позиция. Чуть сдвиньте телефон и сканируйте снова.',p:1};
+ const best=sess.reduce((a,b)=>b.score>a.score?b:a),others=sess.filter(x=>x!==cur),prev=sess[sess.length-2];
+ if(best===cur){const m=cur.score-Math.max(...others.map(x=>x.score));
+  return m>=8?{c:'cy',t:'NEW BEST',s:'Position '+cur.name+' лучше остальных на '+m+' баллов.',p:1}:{c:'ye',t:'NO CLEAR DIFFERENCE',s:'Разница всего '+m+' б. — неубедительно. Продолжайте измерения.',p:0}}
+ const gap=best.score-cur.score;
+ if(cur.score-prev.score>=8)return{c:'gr',t:'BETTER',s:'Лучше предыдущей на '+(cur.score-prev.score)+' б., но Best — Position '+best.name+'.',p:1};
+ if(gap>=8)return{c:'re',t:'WORSE',s:'Хуже Best (Position '+best.name+') на '+gap+' б.',p:1};
+ return{c:'ye',t:'INCONCLUSIVE',s:'Разница с Best '+gap+' б. — неубедительно.',p:0};
+}
+let lastV='';
+function rF(){
+ const v=verdict(),h=$('hc');h.className='hc '+v.c+(v.p?' pulse':'');$('hct').textContent=v.t;$('hcs').textContent=v.s;
+ if(v.t+v.s!==lastV&&!scanning){lastV=v.t+v.s;vib(v.c==='re'?[60,40,60]:v.c==='ye'?20:[30]);}
+ const cur=sess[sess.length-1],best=sess.length?sess.reduce((a,b)=>b.score>a.score?b:a):null;
+ $('fb').textContent=best?best.name+' · '+best.score:'—';$('fc').textContent=cur?cur.name+' · '+cur.score:'—';
+ $('fm').textContent=cur?f(cur.med,' ms'):'—';$('ff').textContent=cur?fp(cur.fail):'—';$('fs').textContent=cur?cur.stab:'—';$('fq').textContent=cur?cur.conf:'—';
+ $('chips').innerHTML=sess.map(p=>`<span class="chip" style="color:${p===best?'var(--c)':col(p.score)};border-color:currentColor">${p.name} · ${p.score}</span>`).join('');
+ $('bscan').textContent=scanning?'SCANNING…':sess.length?'SCAN NEXT POSITION':'START SCAN';$('bscan').disabled=scanning;
+}
+function scan(){
+ if(scanning)return;scanBuf=[];scanning=true;const wasRun=run;if(!run)start();
+ $('bar').style.visibility='visible';const t0=Date.now();vib(15);rF();
+ const iv=setInterval(()=>{
+  const p=clamp((Date.now()-t0)/10000);$('bi').style.width=p*100+'%';
+  if(p>=1){clearInterval(iv);scanning=false;$('bar').style.visibility='hidden';
+   if(!wasRun)stop();
+   if(!scanBuf.length){toast('Нет данных — повторите скан.');rF();return}
+   const s=stats(scanBuf),i=sess.length;
+   const pos=Object.assign({id:Date.now(),name:String.fromCharCode(65+i%26)+(i>=26?Math.floor(i/26)+1:''),ts:Date.now()},s);
+   sess.push(pos);P.push(pos);LS.s('wh_pos',P);rF();rH();rHist();
+  }
+ },200);
+}
+
+function rH(){
+ const sp=$('pick');sp.innerHTML=P.length?P.slice().reverse().map(p=>`<option value="${p.id}">${p.name} · ${new Date(p.ts).toLocaleTimeString().slice(0,5)} · score ${p.score}</option>`).join(''):'<option value="">Сначала сделайте скан в Finder</option>';
+ const rm=$('room');rm.innerHTML='';
+ const placed=PT.map(t=>({t,p:P.find(x=>x.id===t.pid)})).filter(o=>o.p);
+ const mx=placed.length?Math.max(...placed.map(o=>o.p.score)):-1;
+ placed.forEach(o=>{const d=document.createElement('div');d.className='pt';d.textContent=o.p.name;
+  d.style.cssText=`left:${o.t.x}%;top:${o.t.y}%;background:${o.p.score===mx&&placed.length>1?'var(--c)':col(o.p.score)};${o.p.conf==='Low'?'border:2px dashed #000;opacity:.75':''}`;
+  d.onclick=ev=>{ev.stopPropagation();if(confirm('Удалить точку '+o.p.name+'?')){PT=PT.filter(q=>q!==o.t);LS.s('wh_pts',PT);rH()}};rm.appendChild(d)});
+}
+$('room').onclick=ev=>{
+ const pid=+$('pick').value;if(!pid){toast('Выберите скан.');return}
+ const r=$('room').getBoundingClientRect();
+ PT.push({pid,x:+((ev.clientX-r.left)/r.width*100).toFixed(1),y:+((ev.clientY-r.top)/r.height*100).toFixed(1)});LS.s('wh_pts',PT);rH();vib(15);
+};
+$('clrpt').onclick=()=>{if(PT.length&&confirm('Убрать все точки со схемы?')){PT=[];LS.s('wh_pts',PT);rH()}};
+
+function bestAll(){const c=P.filter(p=>p.conf!=='Low');const a=c.length?c:P;return a.length?a.reduce((x,y)=>y.score>x.score?y:x):null}
+function rHist(){
+ const b=bestAll();
+ $('hist').innerHTML=P.length?P.slice().reverse().map(p=>`<div class="row${sel.includes(p.id)?' s':''}" data-id="${p.id}"><div><b>${p===b?'★ ':''}${p.name}</b> <span style="color:var(--m)">${new Date(p.ts).toLocaleString().slice(0,-3)}</span><br><span style="color:var(--m)">med ${f(p.med)} ms · fail ${fp(p.fail)} · n=${p.n} · ${p.conf}</span></div><b style="color:${col(p.score)}">${p.score}</b></div>`).join(''):'<p class="note">История пуста. Сделайте скан в Finder.</p>';
+ document.querySelectorAll('.row').forEach(r=>r.onclick=()=>{const id=+r.dataset.id;sel=sel.includes(id)?sel.filter(x=>x!==id):[...sel,id].slice(-2);rHist()});
+ const [a,c]=sel.map(id=>P.find(p=>p.id===id));
+ $('cmp').innerHTML=a&&c?`<b style="color:#fff">${a.name} vs ${c.name}</b><br>Медиана: ${f(a.med)} → ${f(c.med)} ms${a.med&&c.med?' ('+Math.round((c.med-a.med)/a.med*100)+'%)':''}<br>Ошибки: ${fp(a.fail)} → ${fp(c.fail)}<br>Score: ${a.score} → ${c.score}${(a.conf==='Low'||c.conf==='Low')?'<br><span style="color:var(--y)">Мало проб — вывод ненадёжен.</span>':''}${Math.abs(a.score-c.score)<8?'<br>Разница меньше 8 баллов — неубедительно.':''}`:'';
+}
+$('exp').onclick=()=>{
+ const blob=new Blob([JSON.stringify({app:'WiFi Hunter',exported:new Date().toISOString(),note:'HTTP(S) fetch timings, not ICMP/RSSI',positions:P,points:PT},null,1)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='wifi-hunter.json';document.body.appendChild(a);a.click();a.remove();toast('JSON экспортирован');
+};
+$('clr').onclick=()=>{if(confirm('Удалить всю историю и точки?')){P=[];PT=[];sess=[];sel=[];LS.s('wh_pos',P);LS.s('wh_pts',PT);rHist();rH();rF()}};
+
+$('bs').onclick=()=>{userRun=!run;run?stop():start()};
+$('bscan').onclick=scan;
+$('bres').onclick=()=>{if(!scanning){sess=[];lastV='';rF()}};
+$('sep').onclick=()=>{const v=$('cep').value.trim();if(v&&!/^https:\/\//i.test(v)){toast('Нужен адрес https://');return}LS.s('wh_ep',v);setupEps();toast(v?'Endpoint сохранён':'Endpoint удалён')};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+ document.querySelectorAll('section').forEach((s,i)=>s.classList.toggle('on',i==b.dataset.v));
+ if(b.dataset.v==='0')chart();if(b.dataset.v==='2')rH();if(b.dataset.v==='3')rHist();
+});
+addEventListener('offline',()=>toast('Браузер сообщает: сети нет'));
+addEventListener('online',()=>toast('Браузер сообщает: сеть появилась'));
+addEventListener('resize',chart);
+$('cep').value=LS.g('wh_ep','');
+setupEps();rM();rF();rH();rHist();
+</script></body></html>
